@@ -1,0 +1,4 @@
+# Cloudflare Pages project configuration (used by `wrangler pages dev` and Git deployments).
+name = "pipeline-architect"
+pages_build_output_dir = "dist"
+compatibility_date = "2026-10-01"

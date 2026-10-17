@@ -1,0 +1,67 @@
+rules_version = '2';
+
+// Pipeline Architect — Cloud Firestore security rules.
+//
+// Data model: users/{uid}/experiments/{experimentId}
+//   name               string, 1..80 characters
+//   workloadId         'independent' | 'dependent-alu' | 'load-use' | 'stress' | 'custom'
+//   customInstructions string (newline-separated, 1..2080 chars) when workloadId == 'custom', otherwise null
+//   forwardingEnabled  bool
+//   clockPeriodNs      number in [0.1, 100]
+//   createdAt          server timestamp (must equal request.time on create)
+//
+// Principles: deny by default; every document is readable and writable only by its owner;
+// documents have an exact schema and bounded size; after creation only `name` can change.
+// Performance results are never stored: the REST API recomputes them.
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isOwner(uid) {
+      return request.auth != null && request.auth.uid == uid;
+    }
+
+    function validName(n) {
+      return n is string && n.size() >= 1 && n.size() <= 80;
+    }
+
+    function validProgram(d) {
+      return (d.workloadId in ['independent', 'dependent-alu', 'load-use', 'stress'] && d.customInstructions == null)
+        || (d.workloadId == 'custom'
+            && d.customInstructions is string
+            && d.customInstructions.size() >= 1
+            && d.customInstructions.size() <= 2080);
+    }
+
+    function validExperiment(d) {
+      return d.keys().hasAll(['name', 'workloadId', 'customInstructions', 'forwardingEnabled', 'clockPeriodNs', 'createdAt'])
+        && d.keys().hasOnly(['name', 'workloadId', 'customInstructions', 'forwardingEnabled', 'clockPeriodNs', 'createdAt'])
+        && validName(d.name)
+        && validProgram(d)
+        && d.forwardingEnabled is bool
+        && d.clockPeriodNs is number
+        && d.clockPeriodNs >= 0.1
+        && d.clockPeriodNs <= 100
+        && d.createdAt == request.time;
+    }
+
+    match /users/{uid}/experiments/{experimentId} {
+      allow get: if isOwner(uid);
+      // Queries must be bounded (the app requests at most 100 documents).
+      allow list: if isOwner(uid) && request.query.limit <= 100;
+      allow create: if isOwner(uid)
+        && experimentId.size() <= 64
+        && validExperiment(request.resource.data);
+      // Rename only.
+      allow update: if isOwner(uid)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name'])
+        && validName(request.resource.data.name);
+      allow delete: if isOwner(uid);
+    }
+
+    // Everything else is denied.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

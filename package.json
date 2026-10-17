@@ -1,0 +1,56 @@
+{
+  "name": "pipeline-architect",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "run-p -l dev:api dev:web",
+    "dev:web": "vite",
+    "dev:api": "wrangler pages dev public --port 8788 --ip 127.0.0.1 --show-interactive-dev-session=false",
+    "dev:emulators": "firebase emulators:start --only auth,firestore --project demo-pipeline-architect",
+    "build": "tsc -b && vite build",
+    "preview": "npm run build && wrangler pages dev dist --port 8788 --ip 127.0.0.1",
+    "lint": "oxlint",
+    "typecheck": "tsc -b",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:rules": "firebase emulators:exec --only firestore --project demo-pipeline-architect \"vitest run --config vitest.rules.config.ts\"",
+    "test:e2e": "playwright test",
+    "test:e2e:firebase": "firebase emulators:exec --only auth,firestore --project demo-pipeline-architect \"playwright test --config playwright.firebase.config.ts\"",
+    "check": "npm run lint && npm run typecheck && npm run test && npm run build"
+  },
+  "dependencies": {
+    "firebase": "^13.0.0",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^5.20261016.1",
+    "@firebase/rules-unit-testing": "^6.0.0",
+    "@playwright/test": "^1.64.1",
+    "@tailwindcss/vite": "^4.3.3",
+    "@types/node": "^24.13.3",
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.7",
+    "@vitejs/plugin-react": "^6.1.1",
+    "firebase-tools": "^15.34.0",
+    "npm-run-all2": "^9.0.3",
+    "oxlint": "^1.81.0",
+    "tailwindcss": "^4.3.3",
+    "typescript": "~6.0.2",
+    "vite": "^8.3.0",
+    "vitest": "^5.0.5",
+    "wrangler": "^4.151.1"
+  },
+  "allowScripts": {
+    "esbuild@0.28.2": true,
+    "workerd@1.20261012.1": true,
+    "@firebase/util@1.15.3": true,
+    "protobufjs@7.6.6": true,
+    "re2": false
+  },
+  "description": "Pipeline Architect — Interactive CPU Microarchitecture Laboratory",
+  "engines": {
+    "node": ">=20"
+  }
+}
